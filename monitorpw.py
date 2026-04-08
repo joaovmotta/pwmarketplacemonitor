@@ -5,7 +5,6 @@ import tkinter as tk
 from tkinter import ttk, simpledialog, messagebox
 from datetime import datetime
 import time
-import subprocess
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -34,38 +33,6 @@ CLASSES = {
 }
 
 CONFIG_FILE = "monitor_config.json"
-
-def tocar_alerta(vezes=1):
-    def _tocar():
-        for _ in range(vezes):
-            try:
-                subprocess.run(
-                    ["paplay", "/usr/share/sounds/freedesktop/stereo/complete.oga"],
-                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-                )
-            except:
-                try:
-                    subprocess.run(
-                        ["spd-say", "Novo personagem encontrado"],
-                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-                    )
-                except:
-                    print("\a")
-            time.sleep(0.5)
-    threading.Thread(target=_tocar, daemon=True).start()
-
-def tocar_alerta_hercules():
-    def _tocar():
-        for _ in range(5):
-            try:
-                subprocess.run(
-                    ["paplay", "/usr/share/sounds/freedesktop/stereo/alarm-clock-elapsed.oga"],
-                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-                )
-            except:
-                print("\a")
-            time.sleep(0.3)
-    threading.Thread(target=_tocar, daemon=True).start()
 
 
 class EmailConfig:
@@ -148,42 +115,35 @@ class JanelaConfigEmail(tk.Toplevel):
         self.criar_widgets()
 
     def criar_widgets(self):
-        # Titulo
         tk.Label(self, text="Configuracao de Email (Gmail)",
                  font=("Arial", 14, "bold"), fg="#e94560", bg="#1a1a2e").pack(pady=(15, 5))
 
         tk.Label(self, text="Use uma Senha de App do Google (nao a senha normal)",
                  font=("Arial", 9), fg="#888", bg="#1a1a2e").pack(pady=(0, 10))
 
-        # Frame dos campos
         campos = tk.Frame(self, bg="#1a1a2e")
         campos.pack(fill="x", padx=30, pady=5)
 
-        # Email remetente
         tk.Label(campos, text="Email Gmail (remetente):", fg="white", bg="#1a1a2e",
                  font=("Arial", 10)).grid(row=0, column=0, sticky="w", pady=5)
         self.entry_remetente = tk.Entry(campos, width=35, font=("Arial", 10))
         self.entry_remetente.insert(0, self.email_config.email_remetente)
         self.entry_remetente.grid(row=0, column=1, padx=10, pady=5)
 
-        # Senha de app
         tk.Label(campos, text="Senha de App:", fg="white", bg="#1a1a2e",
                  font=("Arial", 10)).grid(row=1, column=0, sticky="w", pady=5)
         self.entry_senha = tk.Entry(campos, width=35, font=("Arial", 10), show="*")
         self.entry_senha.insert(0, self.email_config.senha_app)
         self.entry_senha.grid(row=1, column=1, padx=10, pady=5)
 
-        # Email destinatario
         tk.Label(campos, text="Email destinatario:", fg="white", bg="#1a1a2e",
                  font=("Arial", 10)).grid(row=2, column=0, sticky="w", pady=5)
         self.entry_destinatario = tk.Entry(campos, width=35, font=("Arial", 10))
         self.entry_destinatario.insert(0, self.email_config.email_destinatario)
         self.entry_destinatario.grid(row=2, column=1, padx=10, pady=5)
 
-        # Separador
         ttk.Separator(self, orient="horizontal").pack(fill="x", padx=30, pady=15)
 
-        # Filtros de notificacao
         tk.Label(self, text="Quando notificar?",
                  font=("Arial", 12, "bold"), fg="#ffcc00", bg="#1a1a2e").pack(pady=(0, 5))
 
@@ -202,7 +162,6 @@ class JanelaConfigEmail(tk.Toplevel):
                        selectcolor="#1a1a2e", activebackground="#1a1a2e",
                        font=("Arial", 10, "bold")).pack(anchor="w", pady=3)
 
-        # Filtro de classe
         classe_frame = tk.Frame(filtros, bg="#1a1a2e")
         classe_frame.pack(anchor="w", pady=5)
 
@@ -213,7 +172,6 @@ class JanelaConfigEmail(tk.Toplevel):
         self.combo_classe.set(self.email_config.notificar_classe)
         self.combo_classe.pack(side="left", padx=10)
 
-        # Filtro de preco
         preco_frame = tk.Frame(filtros, bg="#1a1a2e")
         preco_frame.pack(anchor="w", pady=5)
 
@@ -229,7 +187,6 @@ class JanelaConfigEmail(tk.Toplevel):
         self.entry_preco_max.insert(0, self.email_config.preco_max)
         self.entry_preco_max.pack(side="left", padx=5)
 
-        # Botoes
         btn_frame = tk.Frame(self, bg="#1a1a2e")
         btn_frame.pack(pady=20)
 
@@ -307,14 +264,12 @@ class MarketplaceMonitor:
         self.criar_interface()
 
     def criar_interface(self):
-        # === Header ===
         header = tk.Frame(self.root, bg="#16213e", pady=10)
         header.pack(fill="x")
 
         tk.Label(header, text="The Classic PW 1.2.6 - Marketplace Monitor",
                  font=("Arial", 16, "bold"), fg="#e94560", bg="#16213e").pack()
 
-        # === Filtros ===
         filtros = tk.Frame(self.root, bg="#1a1a2e", pady=10)
         filtros.pack(fill="x", padx=15)
 
@@ -351,7 +306,6 @@ class MarketplaceMonitor:
                        activebackground="#1a1a2e", activeforeground="#e94560",
                        font=("Arial", 10, "bold")).grid(row=0, column=10, padx=10)
 
-        # === Botoes ===
         botoes = tk.Frame(self.root, bg="#1a1a2e", pady=5)
         botoes.pack(fill="x", padx=15)
 
@@ -390,7 +344,6 @@ class MarketplaceMonitor:
                                     padx=15, pady=5, cursor="hand2")
         self.btn_email.pack(side="left", padx=5)
 
-        # Indicador de notificacao ativa
         self.label_notif = tk.Label(botoes, text="", fg="#00ff88",
                                      bg="#1a1a2e", font=("Arial", 9))
         self.label_notif.pack(side="left", padx=5)
@@ -400,7 +353,6 @@ class MarketplaceMonitor:
                                       bg="#1a1a2e", font=("Arial", 9))
         self.label_status.pack(side="right", padx=10)
 
-        # === Tabela Principal ===
         tk.Label(self.root, text="Todos os Personagens", fg="#aaa", bg="#1a1a2e",
                  font=("Arial", 10, "bold")).pack(anchor="w", padx=15)
 
@@ -438,7 +390,6 @@ class MarketplaceMonitor:
 
         self.tree.bind("<Double-1>", self.copiar_link)
 
-        # === Separador e Header dos Novos ===
         novos_header = tk.Frame(self.root, bg="#1a1a2e")
         novos_header.pack(fill="x", padx=15, pady=(5, 0))
 
@@ -459,7 +410,6 @@ class MarketplaceMonitor:
                                            padx=10, pady=2, cursor="hand2")
         self.btn_limpar_novos.pack(side="right")
 
-        # === Tabela Novos ===
         novos_frame = tk.Frame(self.root, bg="#1a1a2e")
         novos_frame.pack(fill="both", expand=True, padx=15, pady=(0, 5))
 
@@ -499,7 +449,6 @@ class MarketplaceMonitor:
 
         self.tree_novos.bind("<Double-1>", self.copiar_link_novos)
 
-        # === Ordenacao nas tabelas ===
         for col in colunas:
             self.tree.heading(col, text=self.tree.heading(col)["text"],
                               command=lambda c=col: self.ordenar_tabela(self.tree, c))
@@ -507,7 +456,6 @@ class MarketplaceMonitor:
             self.tree_novos.heading(col, text=self.tree_novos.heading(col)["text"],
                                     command=lambda c=col: self.ordenar_tabela(self.tree_novos, c))
 
-        # === Estilo ===
         style = ttk.Style()
         style.theme_use("clam")
         style.configure("Treeview",
@@ -524,7 +472,6 @@ class MarketplaceMonitor:
 
         self.tree.tag_configure("hercules", foreground="#00ff88")
 
-        # === Rodape ===
         rodape = tk.Frame(self.root, bg="#16213e", pady=5)
         rodape.pack(fill="x")
 
@@ -565,11 +512,9 @@ class MarketplaceMonitor:
         classe_filtro = CLASSES.get(cfg.notificar_classe)
 
         for cid, info in personagens_novos.items():
-            # Filtro de classe
             if classe_filtro and info.get("classe") != classe_filtro:
                 continue
 
-            # Filtro de preco
             try:
                 preco = int(info.get("preco", 0))
                 if cfg.preco_min and preco < int(cfg.preco_min):
@@ -579,11 +524,9 @@ class MarketplaceMonitor:
             except (ValueError, TypeError):
                 pass
 
-            # Se so quer hercules, filtra
             if cfg.notificar_hercules and "SIM" not in info.get("hercules", ""):
                 continue
 
-            # Se nao quer novos genericos e nao tem hercules, pula
             if not cfg.notificar_novos and not cfg.notificar_hercules:
                 continue
 
@@ -592,7 +535,6 @@ class MarketplaceMonitor:
         if not para_notificar:
             return
 
-        # Monta o email HTML
         tem_hercules = any("SIM" in p.get("hercules", "") for p in para_notificar)
 
         if tem_hercules:
@@ -957,22 +899,16 @@ class MarketplaceMonitor:
             agora = datetime.now().strftime("%H:%M:%S")
 
             if novas:
-                tocar_alerta(1)
-
                 for char_id, info in novas.items():
                     hercules, pets = self.verificar_detalhes_char(char_id)
                     info["hercules"] = hercules
                     info["pets"] = pets
                     info["hora_detectado"] = agora
 
-                    if "SIM" in info["hercules"]:
-                        tocar_alerta_hercules()
-
                     self.novos_monitor[char_id] = info.copy()
 
                     time.sleep(1)
 
-                # Envia notificacao por email
                 self.notificar_por_email(novas)
 
                 for cid in novos_dados:
@@ -1027,6 +963,7 @@ class MarketplaceMonitor:
             self.root.clipboard_clear()
             self.root.clipboard_append(url)
             self.set_status(f"Link copiado: {url}")
+
 
 if __name__ == "__main__":
     root = tk.Tk()
