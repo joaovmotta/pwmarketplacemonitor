@@ -677,13 +677,29 @@ class MarketplaceMonitor:
             options.add_argument("--disable-gpu")
             options.add_argument("--log-level=3")
 
+            import sys
+            chromedriver_local = None
+            if getattr(sys, 'frozen', False):
+                base_path = sys._MEIPASS
+                possivel = os.path.join(base_path, "chromedriver.exe")
+                if os.path.exists(possivel):
+                    chromedriver_local = possivel
+                    print(f"ChromeDriver encontrado em: {chromedriver_local}")
+
             try:
-                driver = webdriver.Chrome(options=options)
+                if chromedriver_local:
+                    driver = webdriver.Chrome(service=Service(chromedriver_local), options=options)
+                else:
+                    driver = webdriver.Chrome(options=options)
             except:
-                driver = webdriver.Chrome(
-                    service=Service(ChromeDriverManager().install()),
-                    options=options
-                )
+                try:
+                    driver = webdriver.Chrome(
+                        service=Service(ChromeDriverManager().install()),
+                        options=options
+                    )
+                except Exception as e:
+                    print(f"Todas tentativas falharam: {e}")
+                    return "ERRO", f"ERRO: {str(e)[:80]}"
 
             driver.get(BASE_DETAIL + char_id)
 
@@ -720,7 +736,7 @@ class MarketplaceMonitor:
                     driver.quit()
                 except:
                     pass
-            return "ERRO", "ERRO"
+            return "ERRO", f"ERRO: {str(e)[:80]}"
 
     def atualizar_tabela(self, dados=None):
         self.tree.delete(*self.tree.get_children())
