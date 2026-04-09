@@ -11,14 +11,6 @@ from email.mime.multipart import MIMEMultipart
 import json
 import os
 
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from webdriver_manager.chrome import ChromeDriverManager
-
 URL = "https://marketplace.theclassic.games/pw126"
 BASE_DETAIL = "https://marketplace.theclassic.games/details/pw126/"
 
@@ -668,74 +660,26 @@ class MarketplaceMonitor:
         return resultado
 
     def verificar_detalhes_char(self, char_id):
-        driver = None
         try:
-            options = Options()
-            options.add_argument("--headless")
-            options.add_argument("--no-sandbox")
-            options.add_argument("--disable-dev-shm-usage")
-            options.add_argument("--disable-gpu")
-            options.add_argument("--log-level=3")
+            import re
+            import unicodedata
 
-            import sys
-            chromedriver_local = None
-            if getattr(sys, 'frozen', False):
-                base_path = sys._MEIPASS
-                possivel = os.path.join(base_path, "chromedriver.exe")
-                if os.path.exists(possivel):
-                    chromedriver_local = possivel
-                    print(f"ChromeDriver encontrado em: {chromedriver_local}")
+            resp = requests.get(BASE_DETAIL + char_id, timeout=10)
+            html = resp.text
 
-            try:
-                if chromedriver_local:
-                    driver = webdriver.Chrome(service=Service(chromedriver_local), options=options)
-                else:
-                    driver = webdriver.Chrome(options=options)
-            except:
-                try:
-                    driver = webdriver.Chrome(
-                        service=Service(ChromeDriverManager().install()),
-                        options=options
-                    )
-                except Exception as e:
-                    print(f"Todas tentativas falharam: {e}")
-                    return "ERRO", f"ERRO: {str(e)[:80]}"
+            pets_encontrados = re.findall(r'data-pet-name="([^"]*)"', html)
 
-            driver.get(BASE_DETAIL + char_id)
+            def normalizar(texto):
+                return unicodedata.normalize('NFKD', texto).encode('ASCII', 'ignore').decode('ASCII').lower()
 
-            try:
-                WebDriverWait(driver, 15).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, "[data-pet-name], .badge, .mount-list, .character-skill"))
-                )
-            except:
-                pass
+            tem_hercules = any("hercules" in normalizar(p) for p in pets_encontrados)
 
-            time.sleep(2)
-
-            pets = driver.find_elements(By.CSS_SELECTOR, "[data-pet-name]")
-            nomes_pets = []
-            tem_hercules = False
-
-            for pet in pets:
-                nome_pet = pet.get_attribute("data-pet-name")
-                if nome_pet:
-                    nomes_pets.append(nome_pet)
-                    if "hercules" in nome_pet.lower() or "hércules" in nome_pet.lower():
-                        tem_hercules = True
-
-            driver.quit()
-
-            pets_str = ", ".join(nomes_pets) if nomes_pets else "Nenhum"
+            pets_str = ", ".join(pets_encontrados) if pets_encontrados else "Nenhum"
             hercules_str = "SIM" if tem_hercules else "NAO"
 
             return hercules_str, pets_str
         except Exception as e:
-            print(f"ERRO Selenium [{char_id}]: {e}")
-            if driver:
-                try:
-                    driver.quit()
-                except:
-                    pass
+            print(f"ERRO [{char_id}]: {e}")
             return "ERRO", f"ERRO: {str(e)[:80]}"
 
     def atualizar_tabela(self, dados=None):
