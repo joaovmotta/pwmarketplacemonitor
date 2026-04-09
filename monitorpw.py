@@ -10,6 +10,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import json
 import os
+import traceback  # adicionado para log de erros/traceback
 
 URL = "https://marketplace.theclassic.games/pw126"
 BASE_DETAIL = "https://marketplace.theclassic.games/details/pw126/"
@@ -604,60 +605,71 @@ class MarketplaceMonitor:
         self.ordem_reversa[chave] = not reverso
 
     def buscar_personagens(self):
-        response = requests.get(URL)
-        soup = BeautifulSoup(response.text, "html.parser")
+        headers = {"User-Agent": "Mozilla/5.0 (compatible; PW-Monitor/1.0)"}
+        try:
+            response = requests.get(URL, headers=headers, timeout=15)
+            print(f"[{datetime.now().strftime('%H:%M:%S')}] GET {URL} -> {response.status_code}")
+            if response.status_code != 200:
+                return {}
 
-        cards = soup.find_all("li", class_="character-card")
-        resultado = {}
+            soup = BeautifulSoup(response.text, "html.parser")
 
-        for card in cards:
-            link = card.find("a", class_="link")
-            if not link:
-                continue
+            cards = soup.find_all("li", class_="character-card")
+            print(f"[{datetime.now().strftime('%H:%M:%S')}] cards encontrados: {len(cards)}")
+            resultado = {}
 
-            href = link.get("href", "")
-            char_id = href.split("/")[-1]
+            for card in cards:
+                link = card.find("a", class_="link")
+                if not link:
+                    continue
 
-            nome_tag = card.find("dd", class_="item-name")
-            nome = nome_tag.text.strip() if nome_tag else "?"
+                href = link.get("href", "")
+                char_id = href.split("/")[-1]
 
-            classe_tag = card.find("dd", class_="item-type")
-            classe = classe_tag.text.strip() if classe_tag else "?"
+                nome_tag = card.find("dd", class_="item-name")
+                nome = nome_tag.text.strip() if nome_tag else "?"
 
-            level_tag = card.find("dl", class_="level")
-            if level_tag:
-                dd = level_tag.find("dd")
-                level = dd.text.strip() if dd else "?"
-            else:
-                level = card.get("data-level", "?")
+                classe_tag = card.find("dd", class_="item-type")
+                classe = classe_tag.text.strip() if classe_tag else "?"
 
-            preco = card.get("data-price", "?")
+                level_tag = card.find("dl", class_="level")
+                if level_tag:
+                    dd = level_tag.find("dd")
+                    level = dd.text.strip() if dd else "?"
+                else:
+                    level = card.get("data-level", "?")
 
-            cultivo = "?"
-            fama = "?"
-            scores = card.find_all("div", class_="display-score")
-            for score in scores:
-                dt = score.find("dt")
-                dd = score.find("dd")
-                if dt and dd:
-                    if "Cultivo" in dt.text:
-                        cultivo = dd.text.strip()
-                    elif "Fama" in dt.text:
-                        fama = dd.text.strip()
+                preco = card.get("data-price", "?")
 
-            resultado[char_id] = {
-                "nome": nome,
-                "classe": classe,
-                "level": level,
-                "preco": preco,
-                "cultivo": cultivo,
-                "fama": fama,
-                "hercules": "---",
-                "pets": "---",
-                "url": href
-            }
+                cultivo = "?"
+                fama = "?"
+                scores = card.find_all("div", class_="display-score")
+                for score in scores:
+                    dt = score.find("dt")
+                    dd = score.find("dd")
+                    if dt and dd:
+                        if "Cultivo" in dt.text:
+                            cultivo = dd.text.strip()
+                        elif "Fama" in dt.text:
+                            fama = dd.text.strip()
 
-        return resultado
+                resultado[char_id] = {
+                    "nome": nome,
+                    "classe": classe,
+                    "level": level,
+                    "preco": preco,
+                    "cultivo": cultivo,
+                    "fama": fama,
+                    "hercules": "---",
+                    "pets": "---",
+                    "url": href
+                }
+
+            return resultado
+        except Exception as e:
+            print(f"Erro em buscar_personagens: {e}")
+            print(traceback.format_exc())
+            return {}
 
     def verificar_detalhes_char(self, char_id):
         try:
@@ -680,6 +692,7 @@ class MarketplaceMonitor:
             return hercules_str, pets_str
         except Exception as e:
             print(f"ERRO [{char_id}]: {e}")
+            print(traceback.format_exc())
             return "ERRO", f"ERRO: {str(e)[:80]}"
 
     def atualizar_tabela(self, dados=None):
@@ -773,6 +786,8 @@ class MarketplaceMonitor:
                 f"{len(self.personagens)} personagens encontrados as {agora}"))
         except Exception as e:
             self.root.after(0, lambda: self.set_status(f"Erro: {e}"))
+            print("Erro em _buscar_thread:", e)
+            print(traceback.format_exc())
         finally:
             self.root.after(0, lambda: self.btn_buscar.config(state="normal"))
 
@@ -833,25 +848,30 @@ class MarketplaceMonitor:
             self.monitorando = False
             if self.timer:
                 self.root.after_cancel(self.timer)
+                self.timer = None
             self.btn_monitor.config(text="Iniciar Monitor (3min)", bg="#1b998b")
             self.set_status("Monitor parado")
         else:
             self.monitorando = True
             self.btn_monitor.config(text="Parar Monitor", bg="#e94560")
             self.set_status("Monitor ativo - verificando a cada 3 min")
-            self.agendar_monitor()
+            # executar imediatamente a primeira verificação
+            self.executar_monitor()
 
     def agendar_monitor(self):
         if self.monitorando:
+            # 180000 ms = 3 minutos
             self.timer = self.root.after(180000, self.executar_monitor)
 
     def executar_monitor(self):
         if not self.monitorando:
             return
+        print(f"[{datetime.now().strftime('%H:%M:%S')}] executar_monitor disparado")
         threading.Thread(target=self._monitor_thread, daemon=True).start()
 
     def _monitor_thread(self):
         try:
+            print(f"[{datetime.now().strftime('%H:%M:%S')}] _monitor_thread iniciado")
             novos_dados = self.buscar_personagens()
             novas = {cid: info for cid, info in novos_dados.items()
                      if cid not in self.personagens}
@@ -902,9 +922,13 @@ class MarketplaceMonitor:
                 self.root.after(0, lambda: self.set_status(
                     f"Sem novos as {agora}. Total: {len(novos_dados)}"))
         except Exception as e:
+            tb = traceback.format_exc()
+            print("Erro no monitor:\n", tb)
             self.root.after(0, lambda: self.set_status(f"Erro monitor: {e}"))
-
-        self.root.after(0, self.agendar_monitor)
+        finally:
+            # sempre re-agendar apenas se o monitor ainda estiver ativo
+            if self.monitorando:
+                self.root.after(0, self.agendar_monitor)
 
     def copiar_link(self, event):
         item = self.tree.selection()
